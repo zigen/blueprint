@@ -118,7 +118,7 @@ namespace blueprint
         EcmascriptEngine::onUncaughtError callback after constructing a ReactApplicationRoot instance.
         This can be useful to hide error details from users in production etc.
      */
-    class ReactApplicationRoot : public View
+    class ReactApplicationRoot : public View, private juce::Timer
     {
     public:
         //==============================================================================
@@ -202,14 +202,17 @@ namespace blueprint
                 // Register internal React.js backend rendering methods
                 registerNativeRenderingHooks();
 
-                if (beforeBundleEval)
+                if (beforeBundleEval){
                     beforeBundleEval(bundle);
+                }
+                stopTimer();
 
                 auto result = engine.evaluate(bundle);
 
-                if (afterBundleEval)
+                if (afterBundleEval) {
                     afterBundleEval(bundle);
-
+                }
+                startTimer(50);
                 return result;
             }
             catch (const EcmascriptEngine::Error& err)
@@ -567,8 +570,11 @@ namespace blueprint
         std::unique_ptr<ViewManager>            viewManager;
         std::unique_ptr<BundleWatcher>          bundleWatcher;
         std::unique_ptr<juce::AttributedString> errorText;
-
+        void timerCallback() {
+            engine.invoke("__schedulerInterrupt__");
+        }
         //==============================================================================
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ReactApplicationRoot)
+
     };
 }
